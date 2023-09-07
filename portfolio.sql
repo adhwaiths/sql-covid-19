@@ -1,3 +1,6 @@
+/*Skills used: Joins,group by, CTE's, Windows Functions, Aggregate Functions, Converting Data Types */
+
+
 /* Data exploration */
  select * from coviddeaths order by location,date;
  
