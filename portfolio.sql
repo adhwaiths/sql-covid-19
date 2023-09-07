@@ -3,6 +3,23 @@
 
 /* Data exploration */
  select * from coviddeaths order by location,date;
+
+/*Cleaning*/
+/* remove the values which denotes cases for entire continent */
+delete from coviddeaths where continent is null;
+delete from covidvaccination where continent is null;
+
+/* identify if there are any duplicate entries for combination of continent,location,date */
+select rown from (select row_number() over(partition by continent,location,date order by location,date) as rown from coviddeaths) a  where a.rown>1
+select rown from (select row_number() over(partition by continent,location,date order by location,date) as rown from covidvaccination) a  where a.rown>1
+/*there are no duplicate entries*/
+
+/* identify columns that are obsolete for the analysis */
+select SUM(isnull(icu_patients_per_million)),SUM(isnull(weekly_icu_admissions)),SUM(isnull(weekly_icu_admissions_per_million)),SUM(isnull(weekly_hosp_admissions)),SUM(isnull(weekly_hosp_admissions_per_million)),SUM(isnull(icu_patients)) from coviddeaths;
+
+/* these columns mostly contain null values and are obsolete for our analysis  hence can be dropped  */
+Alter table coviddeaths drop icu_patients_per_million,drop weekly_icu_admissions,drop weekly_icu_admissions_per_million, drop weekly_hosp_admissions_per_million, drop icu_patients;
+/*end of cleaning*/
  
  /* Select the data that we are going to use */
  select location,date,total_cases,new_cases,total_deaths,population from coviddeaths order by location,date;
@@ -24,7 +41,7 @@ select location,date,total_cases,total_deaths,((total_deaths/total_cases)*100) a
 /* Andorra has the highest infection rate*/
 
 /*Highest death rate compared to population for all the countries*/
-select location,MAX(cast(total_deaths as signed)) as highest_deaths,population,MAX(((total_deaths/population)*100)) as percentage_population_deaths from coviddeaths where continent is not null group by population,location order by percentage_population_deaths DESC LIMIT 0, 1000;
+select location,MAX(cast(total_deaths as signed)) as highest_deaths,population,MAX(((total_deaths/population)*100)) as percentage_population_deaths from coviddeaths  group by population,location order by percentage_population_deaths DESC LIMIT 0, 1000;
 /* USA has the highest death count . Hungary has the highest death rate  */
 
 
@@ -35,9 +52,9 @@ select SUM(cast(new_deaths as signed)) as total_deaths,SUM(new_cases) as total_c
 select a.location,a.date,a.population,b.new_vaccinations from coviddeaths a inner join covidvaccination b on a.location=b.location and a.date=b.date where a.continent is not null order by a.location,a.date;
 
 /*rolling count of vaccinated population for each location */
-select a.location,a.date,a.population,b.new_vaccinations,SUM(CAST(b.new_vaccinations as signed)) over(partition by a.location order by a.location,a.date) as rolling_vaccination_count from coviddeaths a inner join covidvaccination b on a.location=b.location and a.date=b.date where a.continent is not null order by a.location,a.date;
+select a.location,a.date,a.population,b.new_vaccinations,SUM(CAST(b.new_vaccinations as signed)) over(partition by a.location order by a.location,a.date) as rolling_vaccination_count from coviddeaths a inner join covidvaccination b on a.location=b.location and a.date=b.date  order by a.location,a.date;
 
 /*percentage of population vaccinated for each location*/
-with CTE AS (select a.location,a.date,a.population,b.new_vaccinations,SUM(CAST(b.new_vaccinations as signed)) over(partition by a.location order by a.location,a.date) as rolling_vaccination_count from coviddeaths a inner join covidvaccination b on a.location=b.location and a.date=b.date where a.continent is not null order by a.location,a.date)
+with CTE AS (select a.location,a.date,a.population,b.new_vaccinations,SUM(CAST(b.new_vaccinations as signed)) over(partition by a.location order by a.location,a.date) as rolling_vaccination_count from coviddeaths a inner join covidvaccination b on a.location=b.location and a.date=b.date  order by a.location,a.date)
 SELECT *,(MAX(rolling_vaccination_count)/population) as percent_vaccinated FROM CTE group by location order by percent_vaccinated desc;
 /* Gibraltar has the highest vaccination rate due to their small population */
