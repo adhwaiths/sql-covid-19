@@ -14,15 +14,12 @@ select rown from (select row_number() over(partition by continent,location,date 
 select rown from (select row_number() over(partition by continent,location,date order by location,date) as rown from covidvaccination) a  where a.rown>1
 /*there are no duplicate entries*/
 
-/* identify columns that are obsolete for the analysis */
-select SUM(isnull(icu_patients_per_million)),SUM(isnull(weekly_icu_admissions)),SUM(isnull(weekly_icu_admissions_per_million)),SUM(isnull(weekly_hosp_admissions)),SUM(isnull(weekly_hosp_admissions_per_million)),SUM(isnull(icu_patients)) from coviddeaths;
-
-/* these columns mostly contain null values and are obsolete for our analysis  hence can be dropped  */
-Alter table coviddeaths drop icu_patients_per_million,drop weekly_icu_admissions,drop weekly_icu_admissions_per_million, drop weekly_hosp_admissions_per_million, drop icu_patients;
-/*end of cleaning*/
+/* replace null values in population with 0*/
+ update coviddeaths set population=0 where isnull(population)=1;
  
  /* Select the data that we are going to use */
  select location,date,total_cases,new_cases,total_deaths,population from coviddeaths order by location,date;
+/* End of Cleaning*/
  
  /* Understand the total cases vs total deaths for all the locations*/
  select location,date,total_cases,total_deaths,((total_deaths/total_cases)*100) as death_percentage from coviddeaths order by location,date;
